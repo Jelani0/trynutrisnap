@@ -1,0 +1,38 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14 # Uses Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Web App
+        run: |
+            touch .env.local
+            npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      # This step verifies the Xcode project is valid and compiles
+      - name: Build Xcode Project (Unsigned)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -destination 'generic/platform=iOS' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      # Real signing would go here using certificates from Secrets
